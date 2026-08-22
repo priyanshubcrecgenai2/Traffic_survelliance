@@ -1,0 +1,91 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+myenv/
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Model weights & binary checkpoints
+models/*.pt
+models/*.onnx
+models/*.engine
+models/*.tflite
+models/*.weights
+*.pt
+*.onnx
+*.engine
+
+# Video files (large surveillance footage)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.flv
+
+# SQLite Databases & data records
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+
+# Output runs, logs & evidence exports
+output/
+runs/
+*.log
+.system_generated/
+
+# Environments & secrets
+.env
+.env.*
+!.env.example
+
+# IDEs & OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary test crops
+output/anpr_test_crops/
