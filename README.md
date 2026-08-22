@@ -10,6 +10,17 @@
 
 ---
 
+## 🚨 Visual Proof: Rule Enforcement & Cycle Zone Intrusion
+
+The system enforces custom traffic safety rules in real time. Unauthorized 4-wheel vehicles entering designated cycle/pedestrian zones or travelling against directional flow are instantly flagged with visual evidence bounding boxes:
+
+| Violation Evidence 1 | Violation Evidence 2 | Violation Evidence 3 |
+|:---:|:---:|:---:|
+| ![Zone Intrusion Alert 1](images/violation1.png) | ![Zone Intrusion Alert 2](images/violation2.png) | ![Zone Intrusion Alert 3](images/violation3.png) |
+| **Unauthorized vehicle entering cycle zone** | **Cycle zone breach detection** | **Restricted vehicle intrusion flagged** |
+
+---
+
 ## 💡 The Core Philosophy
 
 A conventional traffic surveillance camera only records raw video pixels:
@@ -202,10 +213,13 @@ Traffic_survelliance/
 ├── scripts/                      # Utility Scripts
 │   └── draw_regions.py           # Standalone OpenCV polygon configurator
 │
-├── images/                       # Documentation Screenshots
-│   ├── main-dashboard-1.png
-│   ├── analytics-dashboard.png
-│   └── main-dashboard-2.png
+├── images/                       # Documentation Screenshots & Evidence
+│   ├── main-dashboard-1.png      # Live view & region drawing setup
+│   ├── analytics-dashboard.png   # Operations Analytics Center
+│   ├── main-dashboard-2.png      # Live detections feed
+│   ├── violation1.png            # Visual violation evidence crop 1
+│   ├── violation2.png            # Visual violation evidence crop 2
+│   └── violation3.png            # Visual violation evidence crop 3
 │
 ├── models/                       # Model Weights (gitignored)
 │   ├── UVH-26-MV-YOLOv11-S.pt
