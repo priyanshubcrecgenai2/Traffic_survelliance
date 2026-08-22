@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Intelligence — Live Monitoring</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #080c14; color: #e2e8f0; min-height: 100vh; }
+        
+        .header { background: #0f172a; padding: 14px 28px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+        .header-title { display: flex; align-items: center; gap: 12px; }
+        .header h1 { font-size: 16px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px; text-transform: uppercase; }
+        .live-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(52, 211, 153, 0.12); color: #34d399; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(52, 211, 153, 0.25); }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block; box-shadow: 0 0 8px #34d399; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        .btn { padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .btn-primary { background: #38bdf8; color: #080c14; }
+        .btn-primary:hover { background: #7dd3fc; }
+        .btn-analytics { background: #0284c7; color: #fff; border: 1px solid #38bdf8; }
+        .btn-analytics:hover { background: #0369a1; }
+        .btn-secondary { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+        .btn-secondary:hover { background: #334155; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #080c14; }
+
+        /* Main Container */
+        .main-container { padding: 20px 28px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+        @media(max-width: 1100px) { .main-container { grid-template-columns: 1fr; } }
+
+        /* Stage Card */
+        .stage-card { background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; overflow: hidden; display: flex; flex-direction: column; }
+        .stage-header { padding: 12px 18px; background: #131d31; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+        .stage-title { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .canvas-container { position: relative; width: 100%; background: #000; display: flex; justify-content: center; align-items: center; min-height: 480px; }
+        #setupCanvas { max-width: 100%; height: auto; display: block; cursor: crosshair; }
+        #videoFeed { max-width: 100%; height: auto; display: block; }
+
+        /* Region Toolbar */
+        .region-toolbar { padding: 12px 18px; background: #131d31; border-top: 1px solid #1e293b; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .mode-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #334155; background: #0f172a; color: #94a3b8; }
+        .mode-btn.active { background: #38bdf8; color: #080c14; border-color: #38bdf8; }
+        .mode-btn.zone-btn.active { background: #34d399; color: #080c14; border-color: #34d399; }
+
+        /* Metrics Grid */
+        .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+        .metric-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; }
+        .metric-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .metric-value { font-size: 22px; font-weight: 800; color: #ffffff; }
+        .metric-sub { font-size: 11px; color: #475569; margin-top: 2px; }
+
+        /* Side Panel */
+        .side-panel { display: flex; flex-direction: column; gap: 14px; }
+        .panel-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; }
+        .panel-title { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        .region-item { background: #131d31; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+        .region-item-info { display: flex; align-items: center; gap: 8px; }
+        .region-color-badge { width: 10px; height: 10px; border-radius: 2px; }
+        .del-btn { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 14px; font-weight: bold; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { text-align: left; padding: 6px 8px; color: #64748b; font-weight: 600; border-bottom: 1px solid #1e293b; }
+        td { padding: 6px 8px; border-bottom: 1px solid #131d31; color: #cbd5e1; }
+        tr:hover td { background: #131d31; }
+
+        .hint { font-size: 12px; color: #38bdf8; line-height: 1.4; padding: 10px; background: rgba(56, 189, 248, 0.06); border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">
+            <h1>Traffic Intelligence</h1>
+            <span class="live-tag"><span class="status-dot" id="statusDot"></span> LIVE</span>
+        </div>
+        <div class="header-actions">
+            <a href="/analytics" class="btn btn-analytics">📊 Operations Analytics Dashboard</a>
+            <button class="btn btn-secondary" onclick="switchToSetupMode()">✏️ Redraw Regions</button>
+            <button class="btn btn-warning" id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
+            <button class="btn btn-danger" onclick="stopPipeline()">⏹️ Stop</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Center Visual Stage -->
+        <div class="stage-card">
+            <div class="stage-header">
+                <span class="stage-title" id="stageTitle">🎥 Video Stream & Region Setup</span>
+                <span id="fpsBadge" style="font-size: 12px; color: #38bdf8; font-weight: 700;">NVIDIA GPU (FP16 CUDA)</span>
+            </div>
+
+            <div class="canvas-container" id="canvasContainer">
+                <img id="videoFeed" alt="Video Stream" style="display: none; max-width: 100%; height: auto;">
+                <canvas id="setupCanvas"></canvas>
+            </div>
+
+            <!-- Region Drawing Toolbar -->
+            <div class="region-toolbar" id="setupToolbar">
+                <button class="mode-btn active" id="btnLane1" onclick="selectTool('lane', 'lane_1', 'B2T')">🛣️ Lane 1 (B2T)</button>
+                <button class="mode-btn" id="btnLane2" onclick="selectTool('lane', 'lane_2', 'T2B')">🛣️ Lane 2 (T2B)</button>
+                <button class="mode-btn zone-btn" id="btnCycle" onclick="selectTool('zone', 'cycle_zone', '')">🚴 Cycle / Ped Zone</button>
+                <button class="mode-btn" id="btnAddLane" onclick="addNewLanePrompt()">➕ Add Lane</button>
+                
+                <div style="flex: 1;"></div>
+                <button class="btn btn-secondary" onclick="undoVertex()">↩️ Undo</button>
+                <button class="btn btn-secondary" onclick="finishCurrentPolygon()">✅ Complete Shape</button>
+                <button class="btn btn-secondary" onclick="clearAllPolygons()">🗑️ Clear</button>
+                <button class="btn btn-primary" onclick="startInferenceWithRegions()">🚀 START INFERENCE</button>
+            </div>
+        </div>
+
+        <!-- Right Side Live Metrics Panel -->
+        <div class="side-panel">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Vehicles</div>
+                    <div class="metric-value" id="valTotalVehicles">0</div>
+                    <div class="metric-sub">Processed ROI</div>
+                </div>
+                <div class="metric-card" style="border-color: rgba(239, 68, 68, 0.3);">
+                    <div class="metric-label" style="color: #f87171;">Violations</div>
+                    <div class="metric-value" id="valViolations" style="color: #f87171;">0</div>
+                    <div class="metric-sub">Wrong-Way / Zone</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Lane 1 (B2T)</div>
+                    <div class="metric-value" id="valLane1" style="color: #34d399;">0</div>
+                    <div class="metric-sub">Bottom → Top</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Lane 2 (T2B)</div>
+                    <div class="metric-value" id="valLane2" style="color: #38bdf8;">0</div>
+                    <div class="metric-sub">Top → Bottom</div>
+                </div>
+            </div>
+
+            <!-- Configured Regions List -->
+            <div class="panel-card" id="configuredRegionsCard">
+                <div class="panel-title">
+                    <span>Configured Regions</span>
+                    <span id="regionCountBadge" style="color: #38bdf8;">0 active</span>
+                </div>
+                <div id="regionsListContainer">
+                    <div class="hint">Click 4 corners around each lane on the first frame, then click <b>Start Inference</b>.</div>
+                </div>
+            </div>
+
+            <!-- Live Rule Violations Table -->
+            <div class="panel-card" style="border-color: rgba(239, 68, 68, 0.3);">
+                <div class="panel-title" style="color: #f87171;">
+                    <span>⚠️ Live Rule Violations</span>
+                    <span id="violCountBadge" style="font-size: 11px; background: #ef4444; color: #fff; padding: 2px 6px; border-radius: 4px;">0 alerts</span>
+                </div>
+                <div style="max-height: 180px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr><th>Time</th><th>ID</th><th>Type</th><th>Violation</th></tr>
+                        </thead>
+                        <tbody id="violationsTableBody">
+                            <tr><td colspan="4" style="color: #475569; text-align: center;">No violations detected</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Link to Analytics -->
+            <div class="panel-card" style="background: linear-gradient(135deg, #0f172a, #0c4a6e); text-align: center; border-color: #0284c7;">
+                <h3 style="font-size: 13px; margin-bottom: 6px; color: #38bdf8; font-weight: 700;">Live Analytics Center</h3>
+                <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Real-time traffic flow charts, lane distributions, and searchable vehicle logs.</p>
+                <a href="/analytics" class="btn btn-analytics" style="width: 100%; justify-content: center;">📊 Open Analytics Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isSetupMode = true;
+        let activeTool = { type: 'lane', name: 'lane_1', direction: 'B2T' };
+        let lanes = [];
+        let zones = {};
+        let currentPoints = [];
+        let firstFrameImg = new Image();
+        let canvas, ctx;
+        let isPaused = false;
+
+        const PALETTE = ['#38bdf8', '#34d399', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4'];
+
+        window.onload = function() {
+            canvas = document.getElementById('setupCanvas');
+            ctx = canvas.getContext('2d');
+            
+            canvas.addEventListener('click', handleCanvasClick);
+            loadExistingRegions();
+            loadFirstFrame();
+            setInterval(updateStats, 1000);
+        };
+
+        function loadFirstFrame() {
+            firstFrameImg = new Image();
+            firstFrameImg.onload = function() {
+                canvas.width = firstFrameImg.naturalWidth || firstFrameImg.width || 1280;
+                canvas.height = firstFrameImg.naturalHeight || firstFrameImg.height || 720;
+                redrawCanvas();
+            };
+            firstFrameImg.src = '/api/first_frame?t=' + Date.now();
+        }
+
+        function loadExistingRegions() {
+            fetch('/api/get_regions').then(r => r.json()).then(data => {
+                if (data.lanes && data.lanes.length > 0) {
+                    lanes = data.lanes;
+                    zones = data.zones || {};
+                    updateRegionsListUI();
+                    redrawCanvas();
+                }
+            });
+        }
+
+        function selectTool(type, name, direction) {
+            if (currentPoints.length > 0) {
+                if (confirm("Finish current polygon before switching?")) {
+                    finishCurrentPolygon();
+                } else {
+                    currentPoints = [];
+                }
+            }
+            activeTool = { type, name, direction };
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            if (name === 'lane_1') document.getElementById('btnLane1').classList.add('active');
+            else if (name === 'lane_2') document.getElementById('btnLane2').classList.add('active');
+            else if (type === 'zone') document.getElementById('btnCycle').classList.add('active');
+        }
+
+        function addNewLanePrompt() {
+            const laneNum = lanes.length + 1;
+            const name = prompt("Enter lane name:", "lane_" + laneNum);
+            if (!name) return;
+            const dir = prompt("Enter direction (T2B or B2T):", "T2B");
+            selectTool('lane', name, dir || "T2B");
+        }
+
+        function handleCanvasClick(e) {
+            if (!isSetupMode) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+
+            currentPoints.push([x, y]);
+            redrawCanvas();
+
+            if (currentPoints.length === 4) {
+                setTimeout(() => {
+                    finishCurrentPolygon();
+                }, 100);
+            }
+        }
+
+        function undoVertex() {
+            if (currentPoints.length > 0) {
+                currentPoints.pop();
+                redrawCanvas();
+            }
+        }
+
+        function finishCurrentPolygon() {
+            if (currentPoints.length < 3) {
+                alert("Please click at least 3 corner points to form a region.");
+                return;
+            }
+
+            if (activeTool.type === 'lane') {
+                const existingIdx = lanes.findIndex(l => l.name === activeTool.name);
+                const laneObj = {
+                    name: activeTool.name,
+                    direction: activeTool.direction,
+                    polygon: [...currentPoints]
+                };
+                if (existingIdx >= 0) lanes[existingIdx] = laneObj;
+                else lanes.push(laneObj);
+            } else {
+                zones[activeTool.name] = [...currentPoints];
+            }
+
+            currentPoints = [];
+            updateRegionsListUI();
+            redrawCanvas();
+        }
+
+        function clearAllPolygons() {
+            if (confirm("Clear all defined lanes and zones?")) {
+                lanes = [];
+                zones = {};
+                currentPoints = [];
+                updateRegionsListUI();
+                redrawCanvas();
+            }
+        }
+
+        function removeRegion(type, name) {
+            if (type === 'lane') {
+                lanes = lanes.filter(l => l.name !== name);
+            } else {
+                delete zones[name];
+            }
+            updateRegionsListUI();
+            redrawCanvas();
+        }
+
+        function updateRegionsListUI() {
+            const container = document.getElementById('regionsListContainer');
+            const totalCount = lanes.length + Object.keys(zones).length;
+            document.getElementById('regionCountBadge').textContent = totalCount + ' active';
+
+            if (totalCount === 0) {
+                container.innerHTML = '<div class="hint">Click 4 corners around each lane on the first frame, then click <b>Start Inference</b>.</div>';
+                return;
+            }
+
+            let html = '';
+            lanes.forEach((l, idx) => {
+                const col = PALETTE[idx % PALETTE.length];
+                html += `
+                    <div class="region-item">
+                        <div class="region-item-info">
+                            <div class="region-color-badge" style="background: ${col};"></div>
+                            <b>${l.name}</b> (${l.direction}) - ${l.polygon.length} pts
+                        </div>
+                        <button class="del-btn" onclick="removeRegion('lane', '${l.name}')">&times;</button>
+                    </div>`;
+            });
+
+            Object.entries(zones).forEach(([zname, pts]) => {
+                html += `
+                    <div class="region-item">
+                        <div class="region-item-info">
+                            <div class="region-color-badge" style="background: #34d399;"></div>
+                            <b>${zname}</b> (Zone) - ${pts.length} pts
+                        </div>
+                        <button class="del-btn" onclick="removeRegion('zone', '${zname}')">&times;</button>
+                    </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function redrawCanvas() {
+            if (!canvas || !ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (firstFrameImg && (firstFrameImg.complete || firstFrameImg.naturalWidth > 0)) {
+                ctx.drawImage(firstFrameImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = "#080c14";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#38bdf8";
+                ctx.font = "16px sans-serif";
+                ctx.fillText("Loading video frame...", 30, 50);
+            }
+
+            lanes.forEach((l, idx) => {
+                const col = PALETTE[idx % PALETTE.length];
+                drawPoly(l.polygon, col, l.name + ' (' + l.direction + ')');
+            });
+
+            Object.entries(zones).forEach(([zname, pts]) => {
+                drawPoly(pts, '#34d399', zname);
+            });
+
+            if (currentPoints.length > 0) {
+                ctx.strokeStyle = '#f59e0b';
+                ctx.fillStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                currentPoints.forEach((pt, i) => {
+                    ctx.fillRect(pt[0] - 4, pt[1] - 4, 8, 8);
+                    if (i === 0) ctx.moveTo(pt[0], pt[1]);
+                    else ctx.lineTo(pt[0], pt[1]);
+                });
+                ctx.stroke();
+            }
+        }
+
+        function drawPoly(pts, color, label) {
+            if (!pts || pts.length < 2) return;
+            ctx.fillStyle = color + '33';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            pts.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p[0], p[1]);
+                else ctx.lineTo(p[0], p[1]);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            const cx = pts.reduce((sum, p) => sum + p[0], 0) / pts.length;
+            const cy = pts.reduce((sum, p) => sum + p[1], 0) / pts.length;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText(label, cx - 30, cy);
+        }
+
+        function startInferenceWithRegions() {
+            fetch('/api/start_inference', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lanes: lanes, zones: zones })
+            }).then(r => r.json()).then(res => {
+                if (res.status === 'ok') {
+                    switchToLiveMode();
+                }
+            });
+        }
+
+        function switchToLiveMode() {
+            isSetupMode = false;
+            document.getElementById('setupCanvas').style.display = 'none';
+            document.getElementById('setupToolbar').style.display = 'none';
+            const vfeed = document.getElementById('videoFeed');
+            vfeed.src = '/video_feed?t=' + Date.now();
+            vfeed.style.display = 'block';
+            document.getElementById('stageTitle').textContent = '🔴 Live Inference Stream';
+        }
+
+        function switchToSetupMode() {
+            isSetupMode = true;
+            const vfeed = document.getElementById('videoFeed');
+            vfeed.src = '';
+            vfeed.style.display = 'none';
+            document.getElementById('setupCanvas').style.display = 'block';
+            document.getElementById('setupToolbar').style.display = 'flex';
+            document.getElementById('stageTitle').textContent = '✏️ Region Configuration (First Frame)';
+            redrawCanvas();
+        }
+
+        function togglePause() {
+            fetch('/api/pause', { method: 'POST' }).then(r => r.json()).then(res => {
+                isPaused = res.is_paused;
+                document.getElementById('pauseBtn').textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
+            });
+        }
+
+        function stopPipeline() {
+            if (confirm("Stop traffic intelligence inference?")) {
+                fetch('/api/stop', { method: 'POST' }).then(() => {
+                    document.getElementById('statusDot').style.background = '#ef4444';
+                    document.getElementById('stageTitle').textContent = '⏹️ Inference Stopped';
+                });
+            }
+        }
+
+        function updateStats() {
+            fetch('/api/summary').then(r => r.json()).then(data => {
+                document.getElementById('valTotalVehicles').textContent = data.total_vehicles || 0;
+                
+                const laneCounts = data.by_lane || {};
+                document.getElementById('valLane1').textContent = laneCounts['lane_1'] || 0;
+                document.getElementById('valLane2').textContent = laneCounts['lane_2'] || 0;
+            });
+
+            fetch('/api/violations').then(r => r.json()).then(viols => {
+                const tbody = document.getElementById('violationsTableBody');
+                const badge = document.getElementById('violCountBadge');
+                const valMetric = document.getElementById('valViolations');
+                
+                valMetric.textContent = viols.length;
+                badge.textContent = viols.length + ' alert' + (viols.length === 1 ? '' : 's');
+
+                if (viols && viols.length > 0) {
+                    tbody.innerHTML = '';
+                    viols.slice(0, 8).forEach(v => {
+                        const typeTag = v.violation_type === 'WRONG_WAY' ? 
+                            '<span style="color: #f87171; font-weight: bold;">WRONG WAY</span>' : 
+                            '<span style="color: #f59e0b; font-weight: bold;">ZONE INTRUSION</span>';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${new Date(v.timestamp * 1000).toLocaleTimeString()}</td>
+                                <td>#${v.track_id}</td>
+                                <td>${v.vehicle_type}</td>
+                                <td>${typeTag} <span style="color: #64748b; font-size: 11px;">(${v.lane})</span></td>
+                            </tr>`;
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
